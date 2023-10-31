@@ -31,8 +31,10 @@ router.post('/user/createuser', [
     // let salt = bcrypt.genSaltSync(10);
     // let hash = bcrypt.hashSync(req.body.password, salt);
     const cipherpass = CryptoJS.AES.encrypt(req.body.password, process.env.SECRET_KEY).toString();
-
-
+    const ET = CryptoJS.AES.encrypt(req.body.password, process.env.SECRET_KEY).toString();
+    
+    var ETCtoken = "ETC"+ET;
+    
     let {
         name,
         organisation,
@@ -46,6 +48,7 @@ router.post('/user/createuser', [
         // password: hash,
         password: cipherpass,
         hidden: false,
+        ETCtoken:ETCtoken
     }
     //check if the user exists in the db
     try {
@@ -63,11 +66,11 @@ router.post('/user/createuser', [
 
         //add the user if not present already
         const user = await userModel.create(newUser);
-
         let token = jwt.sign({ user: { id: user._id } }, jwt_key);
-        return  res.json({ message: "User created", token })
+        return  res.json({ message: "User created", token,ETCtoken })
     }
     catch (e) {
+        console.log(e);
         return res.json({ error: "Internal server error!" });
     }
 })
@@ -119,6 +122,27 @@ router.post('/user/login', [
 router.post('/user/forgetpassword',
     async (req, res) => {
         const { email, mobNo } = req.body;
+        try {
+            const user = await teacherModel.findOne({ email, mobNo });
+            if (user) {
+                const newPass = req.body.password;
+                const encPass = CryptoJS.AES.encrypt(newPass, process.env.SECRET_KEY).toString();
+                // const yourPass=CryptoJS.AES.decrypt(user.password, process.env.SECRET_KEY).toString(CryptoJS.enc.Utf8);
+                // res.send(yourPass);
+                user.password = encPass;
+                const updatedUser = await teacherModel.replaceOne({ email,mobNo }, user);
+                res.json({ message: "userUpdated" });
+            }
+        }
+        catch (e) {
+            res.send("user doesn't exist");
+        }
+
+    })
+
+router.get('/user/getETCtoken',
+    async (req, res) => {
+        const user = await user.findById(req.user._id);
         try {
             const user = await teacherModel.findOne({ email, mobNo });
             if (user) {
